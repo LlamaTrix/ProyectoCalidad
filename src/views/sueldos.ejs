@@ -1,0 +1,250 @@
+<main class="flex-grow-1 p-4">
+        <h1 class="mb-4">
+          <i class="fa-solid fa-sack-dollar me-2"></i>Sueldos
+        </h1>
+
+        <!-- ╔═══════════ FORMULARIO DE FILTROS ═══════════╗ -->
+        <form id="filtrosForm" class="row g-3 align-items-end mb-4">
+          <div class="col-md-3">
+            <label for="desde" class="form-label">
+              <i class="fa-regular fa-calendar-days me-1"></i>Desde
+            </label>
+            <input type="date" id="desde" name="desde" class="form-control" />
+          </div>
+
+          <div class="col-md-3">
+            <label for="hasta" class="form-label">
+              <i class="fa-regular fa-calendar-days me-1"></i>Hasta
+            </label>
+            <input type="date" id="hasta" name="hasta" class="form-control" />
+          </div>
+
+          <div class="col-md-3">
+            <label for="parametro" class="form-label">
+              <i class="fa-solid fa-filter me-1"></i>Buscar
+            </label>
+            <input
+              type="text"
+              id="parametro"
+              name="parametro"
+              placeholder="ID, nombre, cargo…"
+              class="form-control"
+            />
+          </div>
+
+          <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="fa-solid fa-magnifying-glass me-1"></i>Filtrar
+            </button>
+          </div>
+        </form>
+        <!-- ╚═════════════════════════════════════════════╝ -->
+
+        <!-- ╔════════════ TABLA DE RESULTADOS ════════════╗ -->
+        <div class="table-responsive">
+          <table id="tablaSueldos" class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>ID</th>
+                <th>Empleado</th>
+                <th>Cargo</th>
+                <th class="text-end">Horas Est.</th>
+                <th class="text-end">Horas Trab.</th>
+                <th class="text-end">Sueldo Est. Bruto</th>
+                <th class="text-end">Sueldo Final Bruto</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Filas generadas por JS -->
+            </tbody>
+          </table>
+        </div>
+        <!-- ╚═════════════════════════════════════════════╝ -->
+      </main>
+    </div>
+
+    <!-- ╔═════════════ MODAL DE ESTADÍSTICAS ════════════╗ -->
+    <div
+      class="modal fade"
+      id="statsModal"
+      tabindex="-1"
+      aria-labelledby="statsModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 id="statsModalLabel" class="modal-title">Estadísticas</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Cerrar"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <canvas id="statsChart" height="130"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ╚═══════════════════════════════════════════════╝ -->
+
+    <!-- ╔════════════ SCRIPTS DE FUNCIONALIDAD ══════════╗ -->
+    <script>
+      /* ────────────────────────────────────────────────
+     1.  Datos de ejemplo mientras el endpoint no esté listo
+  ────────────────────────────────────────────────── */
+      const mockSueldos = [
+        {
+          id: 1,
+          nombre: "Ana Flores",
+          cargo: "Analista",
+          fecha: "2025-06-01",
+          horasEstimadas: 160,
+          horasTrabajadas: 152,
+          sueldoEstimadoBruto: 8000,
+          sueldoFinalBruto: 7600,
+        },
+        {
+          id: 2,
+          nombre: "Carlos Ríos",
+          cargo: "Desarrollador",
+          fecha: "2025-06-01",
+          horasEstimadas: 168,
+          horasTrabajadas: 174,
+          sueldoEstimadoBruto: 9500,
+          sueldoFinalBruto: 9850,
+        },
+        {
+          id: 3,
+          nombre: "Luisa Vega",
+          cargo: "Diseñadora UX",
+          fecha: "2025-05-01",
+          horasEstimadas: 160,
+          horasTrabajadas: 160,
+          sueldoEstimadoBruto: 8500,
+          sueldoFinalBruto: 8500,
+        },
+      ];
+
+      /* ────────────────────────────────────────────────
+     2.  Referencias a elementos
+  ────────────────────────────────────────────────── */
+      const form = document.getElementById("filtrosForm");
+      const tbody = document.querySelector("#tablaSueldos tbody");
+      let chart; // instancia Chart.js
+
+      /* ────────────────────────────────────────────────
+     3.  Envío de filtros (ahora sin fetch)
+  ────────────────────────────────────────────────── */
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const params = Object.fromEntries(new FormData(form));
+        const desdeStr = params.desde;
+        const hastaStr = params.hasta;
+        const texto = (params.parametro || "").trim().toLowerCase();
+
+        const desde = desdeStr ? new Date(desdeStr) : null;
+        const hasta = hastaStr ? new Date(hastaStr) : null;
+
+        const filtrados = mockSueldos.filter((emp) => {
+          /* 3.1. filtro por texto (ID, nombre o cargo) */
+          if (texto) {
+            const match =
+              emp.id.toString().includes(texto) ||
+              emp.nombre.toLowerCase().includes(texto) ||
+              emp.cargo.toLowerCase().includes(texto);
+            if (!match) return false;
+          }
+
+          /* 3.2. filtro por fechas */
+          if (desde || hasta) {
+            const fechaEmp = new Date(emp.fecha);
+            if (desde && fechaEmp < desde) return false;
+            if (hasta && fechaEmp > hasta) return false;
+          }
+
+          return true;
+        });
+
+        renderTabla(filtrados);
+      });
+
+      /* ────────────────────────────────────────────────
+     4.  Renderizar tabla y modal (sin cambios)
+  ────────────────────────────────────────────────── */
+      function renderTabla(lista) {
+        tbody.innerHTML = "";
+        lista.forEach((emp) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+        <td>${emp.id}</td>
+        <td>${emp.nombre}</td>
+        <td>${emp.cargo}</td>
+        <td class="text-end">${emp.horasEstimadas}</td>
+        <td class="text-end">${emp.horasTrabajadas}</td>
+        <td class="text-end">Bs ${emp.sueldoEstimadoBruto.toFixed(2)}</td>
+        <td class="text-end">Bs ${emp.sueldoFinalBruto.toFixed(2)}</td>`;
+          tr.style.cursor = "pointer";
+          tr.addEventListener("click", () => mostrarEstadisticas(emp));
+          tbody.appendChild(tr);
+        });
+      }
+
+      function mostrarEstadisticas(emp) {
+        const modal = new bootstrap.Modal("#statsModal");
+        document.getElementById(
+          "statsModalLabel"
+        ).textContent = `Estadísticas – ${emp.nombre}`;
+
+        const labels = ["Estimado", "Final"];
+        const horas = [emp.horasEstimadas, emp.horasTrabajadas];
+        const sueldos = [emp.sueldoEstimadoBruto, emp.sueldoFinalBruto];
+
+        if (chart) chart.destroy();
+
+        chart = new Chart(document.getElementById("statsChart"), {
+          type: "bar",
+          data: {
+            labels,
+            datasets: [
+              { label: "Horas", data: horas, yAxisID: "y" },
+              { label: "Sueldos (Bs)", data: sueldos, yAxisID: "y1" },
+            ],
+          },
+          options: {
+            interaction: { mode: "index", intersect: false },
+            scales: {
+              y: { beginAtZero: true },
+              y1: { beginAtZero: true, grid: { drawOnChartArea: false } },
+            },
+          },
+        });
+
+        modal.show();
+      }
+
+      /* ────────────────────────────────────────────────
+     5.  Primera renderización (sin filtros)
+  ────────────────────────────────────────────────── */
+      renderTabla(mockSueldos);
+
+      /* ────────────────────────────────────────────────
+     6.  Código fetch comentado — volver a habilitar
+         cuando el backend esté listo:
+  ────────────────────────────────────────────────── */
+      /*
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const params = new URLSearchParams(new FormData(form)).toString();
+    try {
+      const res  = await fetch(`/sueldoempleado?${params}`);
+      if (!res.ok) throw new Error('Error consultando /sueldoempleado');
+      const data = await res.json();
+      renderTabla(data);
+    } catch (err) { … }
+  });
+  */
+    </script>
