@@ -210,4 +210,44 @@ export class EmpleadoController {
       });
     }
   }
+
+  // Obtener sueldo simulado del empleado logeado
+  static async getSueldoEmpleado(req: Request, res: Response): Promise<void> {
+    try {
+      // Obtener usuario logeado del JWT
+      const user = req.user;
+      if (!user) {
+        res.status(401).json({ success: false, message: 'No autenticado' });
+        return;
+      }
+      // Buscar empleado por usuario_id
+      const empleado = await EmpleadoModel.findByUsuarioId(user.idusuario);
+      if (!empleado) {
+        res.status(404).json({ success: false, message: 'Empleado no encontrado para este usuario' });
+        return;
+      }
+      // Leer filtros
+      const { desde, hasta, mes, parametro } = req.query;
+      // Simular datos
+      const horasEstimadas = 160; // Simulado
+      const horasTrabajadas = 150; // Simulado
+      const sueldoBruto = 1000; // Simulado
+      const sueldoLiquido = 900; // Simulado
+      // Responder con el formato solicitado
+      res.json([
+        {
+          id: empleado.idempleado,
+          nombre: empleado.nombre,
+          cargo: empleado.cargo,
+          horasEstimadas,
+          horasTrabajadas,
+          sueldoBruto,
+          sueldoLiquido
+        }
+      ]);
+    } catch (error) {
+      console.error('Error al obtener sueldo simulado:', error);
+      res.status(500).json({ success: false, message: 'Error al obtener sueldo simulado' });
+    }
+  }
 } 

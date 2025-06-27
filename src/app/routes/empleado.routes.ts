@@ -22,4 +22,7 @@ router.put('/:id', EmpleadoController.update);
 // Eliminar empleado
 router.delete('/:id', EmpleadoController.delete);
 
+// Obtener sueldo simulado del empleado logeado
+router.get('/sueldoempleado', EmpleadoController.getSueldoEmpleado);
+
 export default router; 
